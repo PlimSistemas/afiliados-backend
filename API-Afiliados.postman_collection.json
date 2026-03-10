@@ -1,0 +1,679 @@
+{
+  "info": {
+    "name": "API Afiliados",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "Coleção completa da API de Afiliados com JWT. Token salvo automaticamente após login/refresh.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "withdrawal_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth - Público",
+      "item": [
+        {
+          "name": "Registrar usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.id) {",
+                  "        pm.collectionVariables.set('user_id', json.id);",
+                  "        console.log('user_id salvo:', json.id);",
+                  "    }",
+                  "    pm.test('Usuário criado com sucesso', () => {",
+                  "        pm.expect(pm.response.code).to.eql(201);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"João Silva\",\n  \"cpf\": \"12345678900\",\n  \"email\": \"joao@email.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Registra novo usuário. Opcionalmente aceita referral_code."
+          }
+        },
+        {
+          "name": "Registrar com código de indicação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.id) pm.collectionVariables.set('user_id', json.id);",
+                  "    pm.test('Usuário criado com indicação', () => {",
+                  "        pm.expect(pm.response.code).to.eql(201);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maria Souza\",\n  \"cpf\": \"98765432100\",\n  \"email\": \"maria@email.com\",\n  \"password\": \"123456\",\n  \"referral_code\": \"ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Registra usuário vinculado a um afiliado via referral_code."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('token', json.access_token);",
+                  "    console.log('Token salvo automaticamente.');",
+                  "    pm.test('Login realizado com sucesso', () => {",
+                  "        pm.expect(json).to.have.property('access_token');",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Falha no login', () => {",
+                  "        pm.expect(pm.response.code).to.eql(200);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"joao@email.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Autentica o usuário. Token JWT salvo automaticamente na variável {{token}}."
+          }
+        },
+        {
+          "name": "Esqueci a senha",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"joao@email.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "forgot-password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth - Protegido",
+      "item": [
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('token', json.access_token);",
+                  "    console.log('Token renovado e salvo automaticamente.');",
+                  "    pm.test('Token renovado com sucesso', () => {",
+                  "        pm.expect(json).to.have.property('access_token');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Renova o JWT. Novo token salvo automaticamente na variável {{token}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuários",
+      "item": [
+        {
+          "name": "Meus dados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.id) pm.collectionVariables.set('user_id', json.id);",
+                  "    pm.test('Dados retornados', () => {",
+                  "        pm.expect(json).to.have.property('email');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "me"]
+            },
+            "description": "Retorna os dados do usuário autenticado. Salva user_id na variável."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Indicações",
+      "item": [
+        {
+          "name": "Criar indicação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Indicação criada', () => {",
+                  "    pm.expect(pm.response.code).to.eql(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"referredName\": \"Carlos Pereira\",\n  \"referredCpf\": \"11122233344\",\n  \"referredPhone\": \"11999999999\",\n  \"plan\": \"Plano Ouro\",\n  \"cashbackValue\": 150.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/referrals",
+              "host": ["{{base_url}}"],
+              "path": ["api", "referrals"]
+            }
+          }
+        },
+        {
+          "name": "Listar indicações (todas)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/referrals",
+              "host": ["{{base_url}}"],
+              "path": ["api", "referrals"]
+            }
+          }
+        },
+        {
+          "name": "Listar indicações (filtrar por status)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/referrals?status=contracted",
+              "host": ["{{base_url}}"],
+              "path": ["api", "referrals"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "contracted",
+                  "description": "Opções: awaiting | contracted | awaiting_payment | cashback_released | paid | rejected"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Estatísticas de indicações",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Stats retornados', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('total', 'waiting', 'active', 'released');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/referrals/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "referrals", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cashback",
+      "item": [
+        {
+          "name": "Saldo atual",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Saldo retornado', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('available_balance', 'blocked_balance', 'total_earned');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cashback/balance",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cashback", "balance"]
+            }
+          }
+        },
+        {
+          "name": "Histórico / Extrato",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cashback/history?limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cashback", "history"],
+              "query": [
+                { "key": "limit", "value": "50", "description": "Quantidade de registros (padrão 50)" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Saques",
+      "item": [
+        {
+          "name": "Solicitar saque",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.id) {",
+                  "        pm.collectionVariables.set('withdrawal_id', json.id);",
+                  "        console.log('withdrawal_id salvo:', json.id);",
+                  "    }",
+                  "    pm.test('Saque solicitado', () => {",
+                  "        pm.expect(json.status).to.eql('pending');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50.00,\n  \"method\": \"pix\",\n  \"pixKey\": \"joao@email.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/withdrawals/request",
+              "host": ["{{base_url}}"],
+              "path": ["api", "withdrawals", "request"]
+            },
+            "description": "Solicita saque. withdrawal_id salvo automaticamente para uso nas rotas de admin."
+          }
+        },
+        {
+          "name": "Histórico de saques (todos)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/withdrawals/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "withdrawals", "history"]
+            }
+          }
+        },
+        {
+          "name": "Histórico de saques (filtrar por status)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/withdrawals/history?status=pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "withdrawals", "history"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Opções: pending | approved | processing | paid | rejected"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Estatísticas de saques",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Stats de saques retornados', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('total', 'total_amount', 'paid_count', 'rejected_count', 'approved_count', 'pending_count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/withdrawals/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "withdrawals", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Requer usuário com role=admin. Faça login com uma conta admin antes de usar estas rotas.",
+      "item": [
+        {
+          "name": "Listar todos os saques",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/withdrawals",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "withdrawals"]
+            }
+          }
+        },
+        {
+          "name": "Listar saques (filtrar por status)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/withdrawals?status=pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "withdrawals"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Opções: pending | approved | processing | paid | rejected"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Estatísticas gerais (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Stats admin retornados', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('total_pending', 'total_paid', 'total_rejected', 'sum_pending', 'sum_paid');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/withdrawals/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "withdrawals", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Aprovar saque",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Saque aprovado', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('approved');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/withdrawals/{{withdrawal_id}}/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "withdrawals", "{{withdrawal_id}}", "approve"]
+            },
+            "description": "Usa o {{withdrawal_id}} salvo automaticamente ao solicitar saque."
+          }
+        },
+        {
+          "name": "Rejeitar saque",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Saque rejeitado', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('rejected');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Documentação inválida.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/withdrawals/{{withdrawal_id}}/reject",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "withdrawals", "{{withdrawal_id}}", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Marcar saque como pago",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Saque marcado como pago', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('paid');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/withdrawals/{{withdrawal_id}}/mark-paid",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "withdrawals", "{{withdrawal_id}}", "mark-paid"]
+            },
+            "description": "Aprovar o saque antes de marcar como pago."
+          }
+        },
+        {
+          "name": "Ver dados do afiliado",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "{{user_id}}"]
+            },
+            "description": "Retorna nome, CPF e chave PIX do afiliado. Usa {{user_id}} salvo automaticamente."
+          }
+        }
+      ]
+    }
+  ]
+}
