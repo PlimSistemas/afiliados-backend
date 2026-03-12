@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +9,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    use HasFactory, Notifiable, HasUuids;
+    use HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
@@ -25,6 +24,12 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     protected $hidden = [
+        'created_at',
+        'updated_at',
+        'deleted_at',
+        'email_verified_at',
+        'role',
+        'referred_by',
         'password',
         'remember_token',
     ];
@@ -44,6 +49,6 @@ class User extends Authenticatable implements JWTSubject
 
     public function getJWTCustomClaims()
     {
-        return [];
+        return ["id" => $this->id, "role" => $this->role];
     }
 }

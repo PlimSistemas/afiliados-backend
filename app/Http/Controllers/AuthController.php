@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\User;
 use App\Models\Cashback;
+use App\Models\PasswordResetTokens;
 use App\Models\Referral;
+use App\Models\User;
 use App\Rules\ValidCpf;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -18,7 +21,7 @@ class AuthController extends Controller
             'name'     => 'required|string|max:255',
             'cpf'      => ['required', 'string', 'unique:users', new ValidCpf],
             'email'    => 'required|string|email|unique:users',
-            'password' => 'required|string|min:6',
+            'password' => ['required', 'string', Password::min(8)->mixedCase()->numbers()->symbols()],
         ]);
 
         $referredBy = null;
@@ -40,7 +43,7 @@ class AuthController extends Controller
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
             'referral_code' => $referralCode,
-            'referral_link' => url('/register?ref=' . $referralCode),
+            'referral_link' => '/cadastro?ref=' . $referralCode,
             'referred_by'   => $referredBy,
             'role'          => 'user',
         ]);
@@ -59,7 +62,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = auth()->login($user);
+        $token = $this->auth()->login($user);
 
         return $this->respondWithToken($token, 201);
     }
@@ -68,8 +71,8 @@ class AuthController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        if (!$token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Credenciais inválidas.'], 401);
+        if (!$token = $this->auth()->attempt($credentials)) {
+            return response()->json(['error' => 'Email ou senha inválidas.'], 401);
         }
 
         return $this->respondWithToken($token);
@@ -77,22 +80,82 @@ class AuthController extends Controller
 
     public function refresh()
     {
-        return $this->respondWithToken(auth()->refresh());
+        return $this->respondWithToken($this->auth()->refresh());
     }
 
     public function forgotPassword(Request $request)
     {
+        $request->validate(['email' => 'required|email']);
+        $user = User::where('email', $request->email)->first();
+
+        // Criar ou atualizar token de redefinição de senha
+        if ($user) {
+            $code = bin2hex(random_bytes(16));
+            $name = ucfirst(strtolower(explode(' ', trim(($user->name ?? '')))[0])); //Primeiro nome e primeira letra maiuscula
+
+            PasswordResetTokens::updateOrCreate(
+                ['email' => $request->email],
+                [
+                    'token' => bcrypt($code),
+                    'created_at' => now()
+                ]
+            );
+
+            Mail::send('emails.password-reset', [
+                'user' => $name,
+                'resetUrl' => env('FRONTEND_URL') . '/redefinir-senha/' . $code
+            ], function ($message) use ($request) {
+                $message->to($request->email);
+                $message->subject('Recuperação de Senha - Plim Afiliados');
+            });
+        }
+
         // TODO: implementar envio de e-mail via Laravel Mail (item #4 do planejamento)
         return response()->json(['message' => 'Se o e-mail existir, você receberá as instruções em breve.']);
     }
 
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => ['required', 'string', Password::min(8)->mixedCase()->numbers()->symbols()],
+        ]);
+
+        $record = PasswordResetTokens::where('email', $request->email)->first();
+        if (!$record || !Hash::check($request->token, $record->token) || $record->created_at->addMinutes(60)->isPast()) {
+            return response()->json(['error' => 'Token inválido ou expirado.'], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Usuário não encontrado.'], 404);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        // Exclui o token após uso
+        $record->delete();
+
+        return response()->json(['message' => 'Senha redefinida com sucesso.']);
+    }
+
     protected function respondWithToken($token, int $status = 200)
     {
+
+        $user = $this->auth()->user();
+        $frontendUrl = env('FRONTEND_URL');
+
+        if ($user && isset($user->referral_link)) {
+            $user->referral_link = $frontendUrl . $user->referral_link;
+        }
+
         return response()->json([
             'access_token' => $token,
             'token_type'   => 'bearer',
-            'expires_in'   => auth()->factory()->getTTL() * 60,
-            'user'         => auth()->user(),
+            'expires_in'   => $this->auth()->factory()->getTTL() * 60,
+            'user'         => $user,
         ], $status);
     }
 }

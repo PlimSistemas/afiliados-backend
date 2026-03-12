@@ -17,7 +17,7 @@ class WithdrawalController extends Controller
             'method' => 'required|in:pix,invoice_credit',
         ]);
 
-        $user   = auth()->user();
+        $user   = $this->auth()->user();
         $amount = $request->amount;
 
         try {
@@ -62,7 +62,7 @@ class WithdrawalController extends Controller
     public function history(Request $request)
     {
         $perPage = min((int) $request->get('per_page', 15), 100);
-        $query   = Withdrawal::where('user_id', auth()->id());
+        $query   = Withdrawal::where('user_id', $this->auth()->id());
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -75,7 +75,7 @@ class WithdrawalController extends Controller
 
     public function stats()
     {
-        $base = Withdrawal::where('user_id', auth()->id());
+        $base = Withdrawal::where('user_id', $this->auth()->id());
 
         return response()->json([
             'total'          => (clone $base)->count(),

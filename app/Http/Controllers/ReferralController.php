@@ -33,7 +33,7 @@ class ReferralController extends Controller
         }
 
         $referral = Referral::create([
-            'referrer_id'    => auth()->id(),
+            'referrer_id'    => $this->auth()->id(),
             'referred_name'  => $request->referredName,
             'referred_cpf'   => $cpf,
             'referred_phone' => $request->referredPhone,
@@ -48,7 +48,7 @@ class ReferralController extends Controller
     public function index(Request $request)
     {
         $perPage = min((int) $request->get('per_page', 15), 100);
-        $query   = Referral::where('referrer_id', auth()->id());
+        $query   = Referral::where('referrer_id', $this->auth()->id());
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -61,7 +61,7 @@ class ReferralController extends Controller
 
     public function stats()
     {
-        $base = Referral::where('referrer_id', auth()->id());
+        $base = Referral::where('referrer_id', $this->auth()->id());
 
         return response()->json([
             'total'    => (clone $base)->count(),
